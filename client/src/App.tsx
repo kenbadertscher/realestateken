@@ -56,6 +56,12 @@ axiosInstance.interceptors.request.use((request: AxiosRequestConfig) => {
 function App() {
   const authProvider: AuthProvider = {
     login: async ({ credential }: CredentialResponse) => {
+      // Check if this is a guest login
+      if (credential && credential.startsWith('guest_')) {
+        // Guest login - user data is already stored in localStorage
+        return Promise.resolve();
+      }
+
       const profileObj = credential ? parseJwt(credential) : null;
 
       // Save user to MongoDB...
@@ -97,9 +103,13 @@ function App() {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         axios.defaults.headers.common = {};
-        window.google?.accounts.id.revoke(token, () => {
-          return Promise.resolve();
-        });
+        
+        // Only revoke Google token if it's not a guest token
+        if (token && !token.startsWith('guest_token_')) {
+          window.google?.accounts.id.revoke(token, () => {
+            return Promise.resolve();
+          });
+        }
       }
 
       return Promise.resolve();
